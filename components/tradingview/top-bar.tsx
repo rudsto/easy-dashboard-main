@@ -9,6 +9,7 @@ import {
   Maximize2,
   Search,
   Settings,
+  Wand2,
   Star,
   TrendingUp,
 } from "lucide-react"
@@ -117,6 +118,19 @@ export function TopBar({ symbol, interval, onIntervalChange, onSearchClick }: Pr
         </button>
         <button className="flex h-8 w-8 items-center justify-center rounded hover:bg-[#2a2e39]">
           <Settings className="h-4 w-4 text-[#9598a1]" />
+        </button>
+
+        <div className="ml-1 h-5 w-px bg-[#2a2e39]" />
+
+        <button
+          className="flex h-8 items-center gap-1.5 rounded-md border border-[#cc785c]/30 bg-[#cc785c]/10 px-2 text-[12px] font-medium text-[#cc785c] hover:bg-[#cc785c]/20"
+          title="Ask Claude about this market"
+        >
+          <Wand2 className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Ask Claude</span>
+          <span className="hidden md:inline rounded border border-[#cc785c]/30 px-1 py-px font-mono text-[9px] text-[#cc785c]/80">
+            ⌘K
+          </span>
         </button>
       </div>
     </div>
