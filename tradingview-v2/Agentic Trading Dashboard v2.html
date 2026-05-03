@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lumen v2 — Agentic TA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles-v2.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="primitives.jsx"></script>
+  <script type="text/babel" src="pinned-cards.jsx"></script>
+  <script type="text/babel" src="shell.jsx"></script>
+  <script type="text/babel" src="timeline.jsx"></script>
+  <script type="text/babel" src="v2-components.jsx"></script>
+  <script type="text/babel" src="timeline-v2.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    const { useEffect, useState } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "theme": "dark",
+      "density": "default",
+      "layout": "full",
+      "accent": "#cc785c",
+      "showMemory": true
+    }/*EDITMODE-END*/;
+
+    function MemoryStrip() {
+      return (
+        <div className="memory-strip">
+          <div className="memory-icon"><Icon name="agent" size={12}/></div>
+          <span className="memory-label">Claude remembers</span>
+          <div className="memory-pills">
+            <span className="memory-pill">R:R ≥ 2.0</span>
+            <span className="memory-pill">no trades before 09:30</span>
+            <span className="memory-pill">max 3 open positions</span>
+            <span className="memory-pill">stop required</span>
+            <span className="memory-pill">prefers volume confirmation</span>
+          </div>
+          <button className="memory-edit">edit memory →</button>
+        </div>
+      );
+    }
+
+    function App() {
+      const [tweaks, setTweaks] = useTweaks(TWEAK_DEFAULTS);
+      const [explainKey, setExplainKey] = useState(null);
+      const [liveActive, setLiveActive] = useState(false);
+      const [undoOpen, setUndoOpen] = useState(false);
+
+      useEffect(() => {
+        const r = document.documentElement;
+        r.dataset.theme = tweaks.theme;
+        r.dataset.density = tweaks.density;
+        r.dataset.layout = tweaks.layout;
+        r.style.setProperty("--accent", tweaks.accent);
+      }, [tweaks]);
+
+      return (
+        <>
+          <div className="app">
+            <Sidebar />
+            <main className="main">
+              <Header />
+              {tweaks.showMemory && <MemoryStrip/>}
+              <TimelineV2
+                onExplain={setExplainKey}
+                onConfirm={() => setUndoOpen(true)}
+                liveActive={liveActive}
+                onLiveDone={() => setLiveActive(false)}
+              />
+              <ComposerV2 onRun={() => setLiveActive(true)}/>
+            </main>
+            <RightRail />
+          </div>
+
+          <ExplainPopover explainKey={explainKey} onClose={() => setExplainKey(null)}/>
+          <UndoToast
+            open={undoOpen}
+            onUndo={() => setUndoOpen(false)}
+            onComplete={() => setUndoOpen(false)}
+          />
+
+          <TweaksPanel title="Tweaks">
+            <TweakSection title="Theme">
+              <TweakRadio value={tweaks.theme} onChange={(v) => setTweaks({theme:v})}
+                options={[{value:"dark",label:"Dark"},{value:"light",label:"Light"}]}/>
+            </TweakSection>
+            <TweakSection title="Density">
+              <TweakRadio value={tweaks.density} onChange={(v) => setTweaks({density:v})}
+                options={[{value:"default",label:"Spacious"},{value:"cozy",label:"Cozy"},{value:"compact",label:"Compact"}]}/>
+            </TweakSection>
+            <TweakSection title="Layout">
+              <TweakRadio value={tweaks.layout} onChange={(v) => setTweaks({layout:v})}
+                options={[{value:"full",label:"Full"},{value:"focus",label:"Focus"}]}/>
+            </TweakSection>
+            <TweakSection title="Memory strip">
+              <TweakToggle value={tweaks.showMemory} onChange={(v) => setTweaks({showMemory:v})}/>
+            </TweakSection>
+            <TweakSection title="Accent">
+              <TweakColor value={tweaks.accent} onChange={(v) => setTweaks({accent:v})}/>
+            </TweakSection>
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    // Composer V2 — adds a "run live demo" button that triggers tool streaming
+    function ComposerV2({ onRun }) {
+      const [v, setV] = useState("");
+      const slash = ["/scan","/analyze","/draft","/alert","/levels"];
+      return (
+        <div className="composer-wrap">
+          <div className="suggested">
+            <button className="chip primary" onClick={onRun}>▶ Re-run analysis on SOL/USDT (live)</button>
+            {SUGGESTED_ACTIONS.map((s) => (
+              <button key={s} className="chip" onClick={() => setV(s)}>{s}</button>
+            ))}
+          </div>
+          <div className={`composer ${v ? "filled" : ""}`}>
+            <div className="composer-context">
+              <span className="ctx-pill"><Icon name="chart" size={11}/> SOL/USDT</span>
+              <span className="ctx-pill"><Icon name="book" size={11}/> order book</span>
+              <span className="ctx-pill"><Icon name="list" size={11}/> watchlist</span>
+              <button className="ctx-add"><Icon name="plus" size={11}/> add context</button>
+            </div>
+            <textarea rows={2} value={v} onChange={(e) => setV(e.target.value)}
+              placeholder="Ask Claude to analyze, draft, or watch something. Try /scan or /draft."/>
+            <div className="composer-foot">
+              <div className="slash">
+                {slash.map((s) => <button key={s} onClick={() => setV(s+" ")} className="slash-btn">{s}</button>)}
+              </div>
+              <div className="composer-actions">
+                <span className="hint"><Icon name="command" size={11}/> ⏎ to send</span>
+                <button className={`primary-btn send ${v.trim() ? "" : "disabled"}`} onClick={onRun}>
+                  <Icon name="send" size={13}/> Run
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="trust-bar">
+            <Icon name="shield" size={11}/>
+            <span>Claude reads market data and drafts orders. Trades require explicit confirmation + 5s undo window.</span>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
